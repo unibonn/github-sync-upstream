@@ -25,9 +25,11 @@ import subprocess
 import sys
 
 from argh import *
-from github3.api import login
-from github3.models import GitHubError
+from github3 import login
+from github3.exceptions import GitHubError
 from github3.repos import Repository
+from github3.orgs import Organization
+from github3.api import repositories_by
 
 GITHUB_USERNAME = os.environ.get('GITHUB_USERNAME')
 GITHUB_PASSWORD = os.environ.get('GITHUB_PASSWORD')
@@ -80,11 +82,11 @@ def error(messages, exit=True, status=1):
 
 def get_repos(github, organization=None):
     if organization:
-        repos = github.organization(organization).iter_repos()
+        repos = github.organization(organization).repositories()
     else:
-        repos = github.iter_repos()
+        repos = github.repositories_by(GITHUB_USERNAME)
     try:
-        return [r.refresh() for r in repos if r.is_fork()]
+        return [r.refresh() for r in repos if r.fork]
     except GitHubError as err:
         error(u"Github error: %s" % err)
 
@@ -101,7 +103,7 @@ def update_repo(repo):
     repo_dir = check_repo_dir(repo)
     os.chdir(repo_dir)
     log([execute(['git', 'fetch', 'upstream']),
-         execute(['git', 'merge', 'upstream/%s' % repo.master_branch]),
+         execute(['git', 'merge', 'upstream/%s' % repo.default_branch]),
          execute(['git', 'push'])])
     os.chdir(ROOT_DIR)
     log(u'Updated %s' % repo.name)
@@ -120,7 +122,9 @@ def run(no_interactive=False):
     num_repos = len(repos)
     if not num_repos:
         error(u'No forked repository found.')
-    log(u'Found %d forked repositories to synchronize.' % num_repos)
+    log(u'Found %d forked repositories to synchronize:' % num_repos)
+    for r in repos:
+        log(u'%s' % r.full_name)
     if no_interactive is not True:
         if GITHUB_ORGANIZATION:
             confirm(u'Sync %d forked repositories for the "%s" organization?'

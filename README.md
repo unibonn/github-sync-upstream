@@ -13,7 +13,10 @@ and will basically perform an automatic merge from upstream before
 
 ## Setup
 
-Create a virtualenv, install pip requirements from `requirements.txt`.
+Create a virtualenv and install the following requirements:
+
+    $ pip install --pre github3.py 
+    $ pip install argh
 
 Set the following environment variables:
 
